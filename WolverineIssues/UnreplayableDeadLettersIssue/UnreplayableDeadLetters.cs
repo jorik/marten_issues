@@ -12,7 +12,7 @@ public static class UnreplayableDeadLettersIssueCommands
 
 public static class UnreplayableDeadLetterEvents
 {
-    public sealed record MyEvent(string Id);
+    public sealed record MyEvent(string Id, string Source = "UnreplayableDeadLettersIssue");
 }
 
 public sealed class AnotherCustomException() : Exception("Uh oh! Now try to replay me!");

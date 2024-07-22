@@ -15,7 +15,7 @@ public static class ExceptionHandlingIssueCommands
 
 public static class ExceptionHandlingIssueEvents
 {
-    public sealed record MyEvent(string Id);
+    public sealed record MyEvent(string Id, string Source = "ExceptionHandlingIssueEvents");
 }
 
 public sealed class MyException() : Exception("Uh oh!");
