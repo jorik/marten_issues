@@ -1,14 +1,9 @@
 using Marten;
-using Marten.Events;
 using Marten.Events.Daemon.Resiliency;
-using Microsoft.AspNetCore.Mvc;
 using Weasel.Core;
 using Wolverine;
 using Wolverine.Marten;
-using WolverineIssues.DifferentTenantsIssue;
-using WolverineIssues.ExceptionHandlingRetryIssue;
-using WolverineIssues.UnreplayableDeadLettersIssue;
-using RetryIssueHandler = WolverineIssues.ExceptionHandlingRetryIssue.RetryIssueHandler;
+using WolverineIssues;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,8 +15,6 @@ builder
 
 builder.Host.UseWolverine(opts =>
 {
-    RetryIssueHandler.ApplyExceptionHandling(opts);
-
     opts.Policies.AutoApplyTransactions();
     opts.Policies.UseDurableLocalQueues();
 });
@@ -29,14 +22,10 @@ builder.Host.UseWolverine(opts =>
 var marten = builder.Services.AddMarten(opts =>
 {
     opts.AutoCreateSchemaObjects = AutoCreate.CreateOrUpdate;
-    opts.Events.DatabaseSchemaName = "public";
-    opts.Events.StreamIdentity = StreamIdentity.AsString;
 
     opts.Projections.Errors.SkipApplyErrors = false;
     opts.Projections.Errors.SkipUnknownEvents = false;
     opts.Projections.Errors.SkipSerializationErrors = false;
-
-    opts.UseSystemTextJsonForSerialization(EnumStorage.AsString);
 });
 marten
     .UseLightweightSessions()
@@ -44,38 +33,22 @@ marten
     .AddAsyncDaemon(DaemonMode.Solo)
     .UseNpgsqlDataSource()
     .IntegrateWithWolverine()
-    .PublishEventsToWolverine("demo.internal-events");
+    .ProcessEventsWithWolverineHandlersInStrictOrder("Events", e =>
+    {
+        e.FilterIncomingEventsOnStreamType(typeof(Aggregate));
+    });
 
 var app = builder.Build();
 
 app.UseSwagger();
 app.UseSwaggerUI(e => e.EnableTryItOutByDefault());
 
-app.MapPost("/different-tenants", async (IMessageBus bus) =>
-    {
-        var streamId = Guid.NewGuid().ToString();
-        await bus.InvokeAsync(new DifferentTenantIssueCommands.Trigger(streamId));
-
-        return new { streamId };
-    })
-    .WithSummary("Starts the different tenant issue.");
-
-app.MapPost("/exception-handling", async (IMessageBus bus) =>
-    {
-        var streamId = Guid.NewGuid().ToString();
-        await bus.InvokeAsync(new ExceptionHandlingIssueCommands.Trigger(streamId));
-
-        return new { streamId };
-    })
-    .WithSummary("Starts the exception handling issue.");
-
-app.MapPost("/unreplayable-dead-letters", async (IMessageBus bus) =>
-    {
-        var streamId = Guid.NewGuid().ToString();
-        await bus.InvokeAsync(new UnreplayableDeadLettersIssueCommands.Trigger(streamId));
-
-        return new { streamId };
-    })
-    .WithSummary("Starts the unreplayable dead letters issue.");
+app.MapPost("/ievent-sticky-handler", async (IDocumentSession session) =>
+{
+    session.Events.StartStream<Aggregate>(new MyEvent());
+    await session.SaveChangesAsync();
+});
 
 app.Run();
+
+

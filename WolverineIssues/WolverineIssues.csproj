@@ -7,10 +7,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Aspire.Npgsql" Version="8.0.2" />
-      <PackageReference Include="Marten" Version="7.24.0" />
-      <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-      <PackageReference Include="WolverineFx.Marten" Version="2.15.2" />
+      <PackageReference Include="Aspire.Npgsql" Version="8.2.1" />
+      <PackageReference Include="Marten" Version="7.30.3" />
+      <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+      <PackageReference Include="WolverineFx.Marten" Version="3.0.0" />
     </ItemGroup>
 
 </Project>
